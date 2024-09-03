@@ -1,6 +1,7 @@
 from qiskit.quantum_info import Pauli, SparsePauliOp
 import numpy as np
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
 def xxz_hamiltonian(n, delta=0.5, select=None):
     """Returns the XXZ model Hamiltonian for n qubits and a given delta in Qiskit.
@@ -87,3 +88,71 @@ def rotate_circuit_XYZ(qc):
     qc_z = deepcopy(qc)
     qc_z.measure_all()
     return [qc_x, qc_y, qc_z]
+
+
+def plot_side_by_side_bars(data_dicts, labels=None, xlabel=None, ylabel=None, title=None):
+    """
+    Plots side-by-side bar plots for a list of data dictionaries.
+    
+    Parameters:
+    - data_dicts: A list of dictionaries where keys are categories and values are data values.
+    
+    Each dictionary in the list represents a separate dataset.
+    """
+    # Combine all keys from the data dictionaries to get a complete list of categories
+    all_categories = sorted(set().union(*[data.keys() for data in data_dicts]))
+    
+    # Create a list of values for each dataset, filling missing categories with 0
+    all_values = [[data.get(category, 0) for category in all_categories] for data in data_dicts]
+    
+    # Number of datasets and categories
+    num_datasets = len(data_dicts)
+    n = len(all_categories)
+    
+    # Define the positions and width of the bars
+    bar_width = 0.6 / num_datasets  # Dynamic width adjustment based on the number of datasets
+    x = np.arange(n)  # the label locations
+    
+    
+    # Plot each dataset
+    for i, values in enumerate(all_values):
+        if labels is None:
+            plt.bar(x + (i - num_datasets / 2) * bar_width + bar_width / 2, values, width=bar_width, label=f'Data Set {i + 1}')
+        else:
+            plt.bar(x + (i - num_datasets / 2) * bar_width + bar_width / 2, values, width=bar_width, label=labels[i])
+    
+    # Add labels and title
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.xticks(x, all_categories)  # Set the labels for each bar group
+    plt.legend()  # Add a legend
+    
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+    
+def add_partial_swap(qc, qubit1, qubit2, t=np.pi):
+    # by default t=pi, the circuit is equivalent to a full swap gate
+    # ZZ
+    qc.rzz(2*t, qubit1, qubit2)
+    qc.barrier()
+
+    # YY 
+    qc.s(qubit1) 
+    qc.s(qubit2) 
+    qc.h(qubit1) 
+    qc.h(qubit2) 
+    qc.rzz(2*t, qubit1,qubit2)
+    qc.h(qubit1) 
+    qc.h(qubit2) 
+    qc.sdg(qubit1) 
+    qc.sdg(qubit2) 
+
+    # XX
+    qc.h(qubit1) 
+    qc.h(qubit2) 
+    qc.barrier()
+    qc.rzz(2*t, qubit1,qubit2)
+    qc.h(qubit1) 
+    qc.h(qubit2)
