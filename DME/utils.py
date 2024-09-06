@@ -2,6 +2,8 @@ from qiskit.quantum_info import Pauli, SparsePauliOp
 import numpy as np
 from copy import deepcopy
 import matplotlib.pyplot as plt
+from scipy.linalg import sqrtm
+from qiskit_experiments.library import StateTomography
 
 def xxz_hamiltonian(n, delta=0.5, select=None):
     """Returns the XXZ model Hamiltonian for n qubits and a given delta in Qiskit.
@@ -135,7 +137,7 @@ def plot_side_by_side_bars(data_dicts, labels=None, xlabel=None, ylabel=None, ti
 def add_partial_swap(qc, qubit1, qubit2, t=np.pi):
     # by default t=pi, the circuit is equivalent to a full swap gate
     # ZZ
-    qc.rzz(2*t, qubit1, qubit2)
+    qc.rzz(t, qubit1, qubit2)
     qc.barrier()
 
     # YY 
@@ -143,7 +145,7 @@ def add_partial_swap(qc, qubit1, qubit2, t=np.pi):
     qc.s(qubit2) 
     qc.h(qubit1) 
     qc.h(qubit2) 
-    qc.rzz(2*t, qubit1,qubit2)
+    qc.rzz(t, qubit1,qubit2)
     qc.h(qubit1) 
     qc.h(qubit2) 
     qc.sdg(qubit1) 
@@ -153,6 +155,31 @@ def add_partial_swap(qc, qubit1, qubit2, t=np.pi):
     qc.h(qubit1) 
     qc.h(qubit2) 
     qc.barrier()
-    qc.rzz(2*t, qubit1,qubit2)
+    qc.rzz(t, qubit1,qubit2)
     qc.h(qubit1) 
     qc.h(qubit2)
+    
+def get_keys_freq(result):
+    counts = result.get_counts()
+    keys = [key.split()[0][::-1] for key in counts.keys()]
+    sample_counts = list(counts.values())
+    frequencies = np.array(sample_counts) / sum(sample_counts)
+    return dict(zip(keys, frequencies))
+
+def fidelity(rho1, rho2):
+    '''Tr(\sqrt{\sqrt dm_1)dm_2\sqrt{\sqrt dm_1)})^2'''
+    # Compute the square root of the first density matrix
+    sqrt_rho1 = sqrtm(rho1)
+    # Compute the matrix product of sqrt(rho1) * rho2 * sqrt(rho1)
+    product = sqrt_rho1 @ rho2 @ sqrt_rho1    
+    # Compute the square root of the product matrix
+    sqrt_product = sqrtm(product)    
+    return np.real(np.trace(sqrt_product)) ** 2
+
+def qiskit_tomography(qc, tomo_backend, nshots):
+    tomo_exp = StateTomography(qc)
+    tomo_data = tomo_exp.run(backend=tomo_backend, shots = 3000)
+    tomo_data.block_for_results()
+    tomo_results = tomo_data.analysis_results("state")
+    dm_sim = tomo_results.value
+    return dm_sim.data
