@@ -176,9 +176,9 @@ def fidelity(rho1, rho2):
     sqrt_product = sqrtm(product)    
     return np.real(np.trace(sqrt_product)) ** 2
 
-def qiskit_tomography(qc, tomo_backend, nshots):
-    tomo_exp = StateTomography(qc)
-    tomo_data = tomo_exp.run(backend=tomo_backend, shots = 3000)
+def qiskit_tomography(qc, tomo_backend, nshots, physical_qubits=None, measurement_indices=None):
+    tomo_exp = StateTomography(qc,physical_qubits=physical_qubits, measurement_indices=measurement_indices)
+    tomo_data = tomo_exp.run(backend=tomo_backend, shots = nshots)
     tomo_data.block_for_results()
     tomo_results = tomo_data.analysis_results("state")
     dm_sim = tomo_results.value
